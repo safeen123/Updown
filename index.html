@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>إدخال بيانات الطالب وفرز الأقسام</title>
+  <style>
+    body{font-family:Tahoma,Arial;background:#f7fafc;padding:18px;color:#111}
+    h1{font-size:20px;margin-bottom:12px}
+    .box{background:#fff;border:1px solid #ccc;border-radius:10px;padding:12px;margin-bottom:16px}
+    label{font-size:13px;display:block;margin:6px 0 2px}
+    input,select,button{padding:8px;border:1px solid #aaa;border-radius:6px;width:100%}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+    table{width:100%;border-collapse:collapse;background:#fff;margin-top:12px}
+    th,td{padding:8px;border:1px solid #e0e0e0;text-align:center}
+    th{background:#f0f4f8}
+    .fav{cursor:pointer}
+    .star{color:gold}
+    .small{font-size:12px;padding:6px;width:auto}
+    .sad{background:#ffe5e5 !important}
+    .happy{background:#e5ffe5 !important}
+    .dragging{opacity:0.5}
+    .moveBtns button{margin:0 2px;padding:2px 6px;font-size:11px}
+  </style>
+</head>
+<body>
+  <h1>إدخال بيانات الطالب وفرز الأقسام</h1>
+
+  <!-- إدخال بيانات الطالب -->
+  <div class="box">
+    <h3>بيانات الطالب</h3>
+    <div class="grid">
+      <div><label>اسم الطالب</label><input type="text" id="studentName"></div>
+      <div><label>فيزياء</label><input type="number" id="phy" min="0" max="100"></div>
+      <div><label>كيمياء</label><input type="number" id="chem" min="0" max="100"></div>
+      <div><label>أحياء</label><input type="number" id="bio" min="0" max="100"></div>
+      <div><label>عربي</label><input type="number" id="arab" min="0" max="100"></div>
+      <div><label>Eng</label><input type="number" id="eng" min="0" max="100"></div>
+      <div><label>رياضيات</label><input type="number" id="math" min="0" max="100"></div>
+      <div><label>كوردي</label><input type="number" id="kur" min="0" max="100"></div>
+    </div>
+    <button id="calcAvg" style="margin-top:10px">احسب المعدل وفرز الأقسام</button>
+    <div style="margin-top:10px">
+      <label>معدل الطالب</label>
+      <input type="text" id="studentAvgBox" readonly>
+    </div>
+  </div>
+
+  <!-- خيارات البحث -->
+  <div class="box">
+    <h3>بحث إضافي</h3>
+    <div class="grid">
+      <div>
+        <label>القسم</label>
+        <select id="deptPicker">
+          <option value="">-- الكل --</option>
+        </select>
+      </div>
+      <div>
+        <label>المحافظة</label>
+        <select id="governorate">
+          <option value="">-- الكل --</option>
+          <option>بغداد</option>
+          <option>البصرة</option>
+          <option>نينوى</option>
+          <option>كركوك</option>
+          <option>النجف</option>
+          <option>بابل</option>
+          <option>إربيل</option>
+        </select>
+      </div>
+      <div>
+        <label>نوع التمويل</label>
+        <select id="funding">
+          <option value="all">الكل</option>
+          <option value="free">صباح - مجاني</option>
+          <option value="paid_morning">صباح - مدفوع</option>
+          <option value="paid_evening">مسائي - مدفوع</option>
+        </select>
+      </div>
+      <div>
+        <label>نوع الكلية</label>
+        <select id="collegeType">
+          <option value="all">الكل</option>
+          <option>تربية</option>
+          <option>علوم</option>
+          <option>تطبيقية</option>
+          <option>ادارة و اقتصاد</option>
+          <option>طب</option>
+        </select>
+      </div>
+    </div>
+    <button id="searchBtn" style="margin-top:10px">تطبيق البحث</button>
+  </div>
+
+  <table id="resultsTable">
+    <thead>
+      <tr>
+        <th>تسلسل</th>
+        <th>تحريك</th>
+        <th>مفضل</th>
+        <th>القسم</th>
+        <th>الكلية</th>
+        <th>المحافظة</th>
+        <th>صباح مجاني</th>
+        <th>صباح مدفوع</th>
+        <th>مسائي مدفوع</th>
+        <th>المعدل المستخدم</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const colleges=['تربية','علوم','تطبيقية','ادارة و اقتصاد','طب'];
+    const governorates=['بغداد','البصرة','نينوى','كركوك','النجف','بابل','إربيل'];
+    const subjects=['فيزياء','كيمياء','احياء','عربي','eng','رياضيات','كوردي'];
+    function rand(min,max){return Math.floor(Math.random()*(max-min+1))+min}
+
+    const departments=[];
+    const deptBase=['العلوم','التطبيقات','تكنولوجيا','الأسس','الرياضيات','اللغة','الهندسة','البيولوجي'];
+    for(let i=0;i<60;i++){
+      const sub=subjects[rand(0,subjects.length-1)];
+      const base=deptBase[rand(0,deptBase.length-1)];
+      const college=colleges[rand(0,colleges.length-1)];
+      const gov=governorates[rand(0,governorates.length-1)];
+      const name=`${sub} - ${base} ${i+1}`;
+      const free=rand(60,92);
+      const paidMorning=Math.max(50,free-rand(0,6)+rand(-3,4));
+      const paidEvening=Math.max(45,free-rand(2,10));
+      departments.push({id:i+1,name,college,governorate:gov,free,paidMorning,paidEvening,favorite:false});
+    }
+
+    const deptPicker=document.getElementById('deptPicker');
+    departments.forEach(d=>{
+      const opt=document.createElement('option');
+      opt.value=d.name;
+      opt.textContent=d.name;
+      deptPicker.appendChild(opt);
+    });
+
+    const tbody=document.querySelector('#resultsTable tbody');
+
+    function renderTable(rows){
+      tbody.innerHTML='';
+      rows.forEach((r,i)=>{
+        const tr=document.createElement('tr');
+        tr.draggable=true;
+        tr.className=r.usedAvg>studentAvg? 'sad':'happy';
+        tr.dataset.id=r.id;
+        tr.innerHTML=`
+          <td>${i+1}</td>
+          <td class="moveBtns">
+            <button data-dir="up">▲</button>
+            <button data-dir="down">▼</button>
+          </td>
+          <td class="fav"><span data-id="${r.id}" class="star">${r.favorite?'★':'☆'}</span></td>
+          <td>${r.name}</td>
+          <td>${r.college}</td>
+          <td>${r.governorate}</td>
+          <td>${r.free}</td>
+          <td>${r.paidMorning}</td>
+          <td>${r.paidEvening}</td>
+          <td>${r.usedAvg!==undefined?r.usedAvg:''}</td>`;
+        tbody.appendChild(tr);
+      });
+
+      // التعامل مع المفضلة
+      document.querySelectorAll('.star').forEach(el=>{
+        el.addEventListener('click',()=>{
+          const id=+el.dataset.id;
+          const d=departments.find(x=>x.id===id);
+          d.favorite=!d.favorite;
+          el.textContent=d.favorite?'★':'☆';
+        });
+      });
+
+      // أزرار التحريك
+      document.querySelectorAll('.moveBtns button').forEach(btn=>{
+        btn.addEventListener('click',()=>{
+          const tr=btn.closest('tr');
+          if(btn.dataset.dir==='up' && tr.previousElementSibling){
+            tbody.insertBefore(tr,tr.previousElementSibling);
+          }
+          if(btn.dataset.dir==='down' && tr.nextElementSibling){
+            tbody.insertBefore(tr.nextElementSibling,tr);
+          }
+        });
+      });
+
+      // سحب وإفلات
+      tbody.querySelectorAll('tr').forEach(tr=>{
+        tr.addEventListener('dragstart',e=>{
+          tr.classList.add('dragging');
+        });
+        tr.addEventListener('dragend',e=>{
+          tr.classList.remove('dragging');
+        });
+      });
+
+      tbody.addEventListener('dragover',e=>{
+        e.preventDefault();
+        const dragging=document.querySelector('.dragging');
+        const after=getDragAfterElement(tbody,e.clientY);
+        if(after==null){
+          tbody.appendChild(dragging);
+        } else {
+          tbody.insertBefore(dragging,after);
+        }
+      });
+    }
+
+    function getDragAfterElement(container,y){
+      const els=[...container.querySelectorAll('tr:not(.dragging)')];
+      return els.reduce((closest,child)=>{
+        const box=child.getBoundingClientRect();
+        const offset=y-box.top-box.height/2;
+        if(offset<0 && offset>closest.offset){
+          return {offset:offset,element:child};
+        } else {
+          return closest;
+        }
+      },{offset:Number.NEGATIVE_INFINITY}).element;
+    }
+
+    let studentAvg=0;
+    document.getElementById('calcAvg').addEventListener('click',()=>{
+      const vals=['phy','chem','bio','arab','eng','math','kur'].map(id=>+document.getElementById(id).value||0);
+      const weights=[2,1,1,1,1,2,1];
+      const sum=vals.reduce((a,b,i)=>a+b*weights[i],0);
+      const wSum=weights.reduce((a,b)=>a+b,0);
+      studentAvg=Math.round(sum/wSum);
+      document.getElementById('studentAvgBox').value=studentAvg;
+      filterAndRender();
+    });
+
+    document.getElementById('searchBtn').addEventListener('click',()=>{
+      filterAndRender();
+    });
+
+    function filterAndRender(){
+      let rows=departments.map(d=>({...d}));
+      const funding=document.getElementById('funding').value;
+      const collegeType=document.getElementById('collegeType').value;
+      const gov=document.getElementById('governorate').value;
+      const deptSel=document.getElementById('deptPicker').value;
+
+      rows.forEach(r=>{
+        if(funding==='free') r.usedAvg=r.free;
+        else if(funding==='paid_morning') r.usedAvg=r.paidMorning;
+        else if(funding==='paid_evening') r.usedAvg=r.paidEvening;
+        else r.usedAvg=Math.max(r.free,r.paidMorning,r.paidEvening);
+      });
+
+      if(gov) rows=rows.filter(r=>r.governorate===gov);
+      if(collegeType!=='all') rows=rows.filter(r=>r.college===collegeType);
+      if(deptSel) rows=rows.filter(r=>r.name===deptSel);
+
+      rows=rows.filter(r=>r.usedAvg<=studentAvg+5 && r.usedAvg>=studentAvg-10);
+      rows.sort((a,b)=>b.usedAvg-a.usedAvg);
+
+      renderTable(rows);
+    }
+
+    renderTable([]);
+  </script>
+</body>
+</html>
